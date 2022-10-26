@@ -36,3 +36,4 @@ accounting line bot integrated with google sheet using google script
   - [LINE chatbot 系列 — 拆解 LINE webhook event type & message type](https://medium.com/coding-with-fun-favor/%E6%8B%86%E8%A7%A3-line-webhook-event-type-message-type-2941beee0b79) 
 ### More
 - [1 個月內累積破萬使用者：大學科系查詢 LINE 機器人製作分享](https://jcshawn.com/dpsearch-bot-development-journal/)
+- https://github.com/clarencetw/line-bot/tree/1595b88bc828431c6996bcf1710a06e83bd01f58
