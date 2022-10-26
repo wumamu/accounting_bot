@@ -1,52 +1,72 @@
 // google sheet
 
 function googlesheetTask(messageText) {
-  //設定相應的欄位參數
-  const result = messageText.trim().split(/\s+/);
-  var date = result[0];
-  var description = result[1];
-  var expense = result[2];
-
+  // 設定相應的欄位參數
   // var params = e.parameter; //這一個不要動
-  // var date = params.date;
-  // var description = params.description;
-  // var income = params.income;
-  // var expense = params.expense;
-  // var total_all = params.total_all;
-  // var total_by_month = params.total_by_month;
-  // var address = params.order_address;
-  // var invoice = params.order_invoice;
-  // var ps = params.order_ps;
+  const result = messageText.trim().split(/\s+/);
+  var date = "date";
+  var description = "description";
+  var expense = 0;
+  
+  if(result.length < 3) {
+    date = findSheet();
+    description = result[0];
+    expense = result[1];
+  } else {
+    date = result[0];
+    description = result[1];
+    expense = result[2];
+    googlesheetDate(date);
+  }
+
   //設定sheet資訊
   var SpreadSheet = SpreadsheetApp.openById("<your_google_doc_doc_ID>");
-  var Sheet = SpreadSheet.getSheetByName("<your_sheet_name>");
+  var Sheet = SpreadSheet.getSheetByName("table1");// <your_sheet_name>
   var LastRow = Sheet.getLastRow();
   //資料寫入對應欄位中
   Sheet.getRange(LastRow+1, 1).setValue(date);
   Sheet.getRange(LastRow+1, 2).setValue(description);
-  // Sheet.getRange(LastRow+1, 3).setValue(income);
   Sheet.getRange(LastRow+1, 4).setValue(expense);
-  // Sheet.getRange(LastRow+1, 5).setValue(total_all);
-  // Sheet.getRange(LastRow+1, 6).setValue(total_by_month);
-  // Sheet.getRange(LastRow+1, 7).setValue(address);
-  // Sheet.getRange(LastRow+1, 8).setValue(invoice);
-  // Sheet.getRange(LastRow+1, 9).setValue(ps);
-  //當資料寫入完成後，回傳資訊
-  // retun true;
-  // return ContentService.createTextOutput("成功");
 }
 
-//line bot
+function findSheet() {
+  var SpreadSheet = SpreadsheetApp.openById("<your_google_doc_doc_ID>");
+  var Sheet = SpreadSheet.getSheetByName("dateConst");// <your_sheet_name>
+  var LastRow = Sheet.getLastRow();
+  return Sheet.getRange(LastRow, 1).getValues()
+}
 
+function googlesheetDate(date) {
+  var SpreadSheet = SpreadsheetApp.openById("1dfu6vj-TNHD_nXSgKw4vcYlBZfYazbs6c1D8U7HQrGY");
+  var Sheet = SpreadSheet.getSheetByName("dateConst");// <your_sheet_name>
+  var LastRow = Sheet.getLastRow();
+  Sheet.getRange(LastRow+1, 1).setValue(date);
+}
+
+
+// line bot
+// not Channel secret 
 var channelToken = '<your_channel_access_token>';
 
-// 回覆訊息
+// bot default 訊息
+function pushMsg(channelToken, message, usrId) {
+  var url = 'https://api.line.me/v2/bot/message/push';
+  var opt = {
+    'headers': {
+      'Content-Type': 'application/json; charset=UTF-8',
+      'Authorization': 'Bearer ' + channelToken,
+    },
+    'method': 'post',
+    'payload': JSON.stringify({
+      'to': usrId,
+      'messages': [{'type': 'text', 'text': message}]
+    })
+  };
+  UrlFetchApp.fetch(url, opt);
+}
+
+// bot 根據 reply 回覆訊息
 function replyMsg(replyToken, userMsg, channelToken) {
-  const myArray = userMsg.split("$");
-  // var customReplyMsg = "No"
-  // if(myArray[2].includes("+")){
-  //   customReplyMsg = "Yes"
-  // }
   var url = 'https://api.line.me/v2/bot/message/reply';
   var opt = {
     'headers': {
@@ -61,9 +81,16 @@ function replyMsg(replyToken, userMsg, channelToken) {
   };
   UrlFetchApp.fetch(url, opt);
 }
-// 發送訊息
-function pushMsg(channelToken, message, usrId) {
-  var url = 'https://api.line.me/v2/bot/message/push';
+
+// quick reply
+function quickReply(replyToken, channelToken) {
+  const date = new Date();
+  let day = date.getDate();
+  let month = date.getMonth() + 1;
+  let year = date.getFullYear();
+  let currentDate = `${year}/${month}/${day}`;
+
+  var url = 'https://api.line.me/v2/bot/message/reply';
   var opt = {
     'headers': {
       'Content-Type': 'application/json; charset=UTF-8',
@@ -71,8 +98,91 @@ function pushMsg(channelToken, message, usrId) {
     },
     'method': 'post',
     'payload': JSON.stringify({
-      'to': usrId,
-      'messages': [{'type': 'text', 'text': message}]
+      'replyToken': replyToken,
+      'messages': [{
+        //quick reply
+        'type': "text",
+        'text': "你想做啥啊",
+        'quickReply': {
+          "items": [
+              {
+                "type": "action",
+                "action": {
+                  "type": "message",
+                  "label": "看看我的記事本",
+                  "text": "lookUp"
+                }
+              },
+              {
+                "type": "action",
+                "action": {
+                  "type": "postback",
+                  "label": "記今天的帳",
+                  "data": "storeId=54321",
+                  "inputOption": "openKeyboard",
+                  "fillInText": `${currentDate} `
+                }            
+              },
+              {
+                "type": "action",
+                "action": {
+                  "type": "datetimepicker",
+                  "label": "記之前的帳",
+                  "data": "datetimepicker",
+                  "mode": "date",
+                }            
+              }
+            ]
+        } 
+      }]
+    })
+  };
+  UrlFetchApp.fetch(url, opt);
+}
+
+function replyButtonTemplate(replyToken, channelToken) {
+  var url = 'https://api.line.me/v2/bot/message/reply';
+  var opt = {
+    'headers': {
+      'Content-Type': 'application/json; charset=UTF-8',
+      'Authorization': 'Bearer ' + channelToken,
+    },
+    'method': 'post',
+    'payload': JSON.stringify({
+      'replyToken': replyToken,
+      'messages': [
+        // bottonTemplate
+        {
+          "type": "template",
+          "altText": "This is a buttons template",
+          "template": {
+            "type": "buttons",
+            "thumbnailImageUrl": "https://cdn-icons-png.flaticon.com/512/2382/2382307.png",
+            "imageAspectRatio": "rectangle",
+            "imageSize": "cover",
+            "imageBackgroundColor": "#FFFFFF",
+            "title": "來看看記帳本",
+            "text": "你要看哪個哩～",
+            "defaultAction": {
+              "type": "uri",
+              "label": "新的記帳本",
+              "uri": "https://docs.google.com/spreadsheets/d/1dfu6vj-TNHD_nXSgKw4vcYlBZfYazbs6c1D8U7HQrGY/edit#gid=0"
+            },
+            "actions": [
+              {
+                "type": "uri",
+                "label": "舊的記帳本",
+                "uri": "https://docs.google.com/spreadsheets/d/1D_D1xcVxOL7P8qpA81rUEYaP_OoNHIT8/edit#gid=339835627"
+              },
+              {
+                "type": "uri",
+                "label": "新的記帳本",
+                "uri": "https://docs.google.com/spreadsheets/d/1dfu6vj-TNHD_nXSgKw4vcYlBZfYazbs6c1D8U7HQrGY/edit#gid=0"
+              }
+            ]
+          }
+        }
+      ]
     })
   };
   UrlFetchApp.fetch(url, opt);
@@ -96,35 +206,36 @@ function doPost(e) {
         var timeStamp = event.timestamp;
         switch (type) {
           case 'postback':
-            break;
+            var data = event.postback.data
+            if (data=="datetimepicker") {
+              var specificDate = event.postback.params.date.trim().replaceAll("-", "/");
+              googlesheetDate(specificDate);
+              replyMsg(replyToken, `時間設定好咯 ${specificDate}`, channelToken);
+              break;
+            }
           case 'message':
             var messageType = event.message.type;
-            var messageId = event.message.id;
+            // var messageId = event.message.id;
             var messageText = event.message.text; // 使用者的 Message_字串
-            googlesheetTask(messageText)
-            replyMsg(replyToken, "ok", channelToken);
-            // replyMsg(replyToken, userId+"$"+groupId+"$"+messageText, channelToken);
-            replyMsg(replyToken, "success", channelToken);
-            break;
-          case 'join':
-            pushMsg(channelToken, '我是Bot！Hello！', sourceId);
-            break;
-          case 'leave':
-            pushMsg(channelToken, 'Good Bye！', sourceId);
-            break;
-          case 'memberLeft':
-            pushMsg(channelToken, '我是Bot！Bye！', sourceId);
-            break;
-          case 'memberJoined':
-            pushMsg(channelToken, '我是Bot！Hello~', sourceId);
-            break;
-          case 'follow':
-            pushMsg(channelToken, 'Hello！', sourceId);
-            break;
-          case 'unfollow':
-            pushMsg(channelToken, 'Bye bye！', sourceId);
-            break;
+
+            switch(messageType) {
+              case 'text':
+                if (messageText=="lookUp") {
+                  replyButtonTemplate(replyToken, channelToken);
+                } else {
+                  googlesheetTask(messageText);
+                  replyMsg(replyToken, "ok", channelToken);
+                }
+                break;
+              case 'sticker':
+                quickReply(replyToken, channelToken);
+                break;
+              default:
+                replyMsg(replyToken, "抱歉不支援", channelToken);
+                break;
+            }    
           default:
+            replyMsg(replyToken, "抱歉不支援", channelToken);
             break;
         }
       }
