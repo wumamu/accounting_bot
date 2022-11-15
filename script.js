@@ -37,7 +37,7 @@ function findSheet() {
 }
 
 function googlesheetDate(date) {
-  var SpreadSheet = SpreadsheetApp.openById("1dfu6vj-TNHD_nXSgKw4vcYlBZfYazbs6c1D8U7HQrGY");
+  var SpreadSheet = SpreadsheetApp.openById("<your_google_doc_doc_ID>");
   var Sheet = SpreadSheet.getSheetByName("dateConst");// <your_sheet_name>
   var LastRow = Sheet.getLastRow();
   Sheet.getRange(LastRow+1, 1).setValue(date);
